@@ -2,7 +2,7 @@
 
 这是一个无需构建的静态 GitHub Pages 项目，页面从 `assets/products.csv` 读取墨西哥商品数据。它应部署到独立的 MX 仓库，不要覆盖现有的 SA 站点。
 
-页面默认使用西班牙语，可切换 English 或中文。商品列表支持搜索、店铺浏览、佣金筛选、价格和佣金排序。类目筛选暂时隐藏，因为当前 MX 数据没有类目字段。
+页面默认使用西班牙语，可切换 English 或中文。商品列表支持搜索、店铺浏览、单级类目筛选、佣金筛选、价格和佣金排序。类目名称会随界面语言切换。
 
 商品详情可将商品加入选品池。选品池按商品 ID 去重，显示并支持一键复制全部商品 ID。语言和选品池分别保存在浏览器的 `sea-ideal-mx-language` 与 `sea-ideal-mx-selection-pool` 中，不会与 SA 站点共用本地数据。
 
@@ -11,7 +11,7 @@
 站点读取 `assets/products.csv`，表头为：
 
 ```csv
-row,product_name,price,shop,link,image_url,sheet_name,commission
+row,product_name,price,shop,link,image_url,sheet_name,commission,category_level_1
 ```
 
 当前文件由 `C:\Users\HI\Downloads\products_mx.csv` 转换而来：
@@ -23,8 +23,9 @@ row,product_name,price,shop,link,image_url,sheet_name,commission
 - `商品链接` → `link`，使用左侧联盟链接
 - `图片链接` → `image_url`
 - `创作者佣金率` → `commission`
+- `类目` → `category_level_1`
 
-源文件是 GBK 编码，不是 UTF-8。浏览器端 CSV 已转换为 UTF-8，以正确显示西班牙语和中文；以后更新时也应先按同样映射转换，不能直接用原始导出文件覆盖 `assets/products.csv`。当前数据去除重复商品 ID 后有 293 条。
+当前源文件是 UTF-8 编码。浏览器端 CSV 同样保持 UTF-8，以正确显示西班牙语和中文；以后更新时应继续按上述字段映射转换，不能直接用原始导出文件覆盖 `assets/products.csv`。当前数据去除说明行和重复商品 ID 后有 293 条，共 7 个类目。
 
 ## 独立部署
 

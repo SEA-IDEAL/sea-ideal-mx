@@ -14,7 +14,8 @@ const translations = {
     tryAgain: 'Prueba otra búsqueda o filtro', loadMore: 'Mostrar más', commission: 'Comisión',
     commissionRate: 'Comisión del creador', seller: 'Tienda',
     pool: 'Selección', addToPool: 'Agregar a selección', removeFromPool: 'Quitar de selección', row: 'ID de producto',
-    poolEmpty: 'Tu selección está vacía', poolEmptyDesc: 'Agrega productos desde los detalles.',
+    poolEmpty: 'Tu selección está vacía', poolEmptyDesc: 'Agrega productos desde los detalles.', allCategories: 'Todas las categorías',
+    categoryNames: { '美妆个护': 'Belleza y cuidado personal', '服饰内睡': 'Ropa, ropa interior y pijamas', '数码家电': 'Electrónica y electrodomésticos', '居家日用': 'Hogar y uso diario', '运动健身': 'Deportes y fitness', '保健': 'Salud y bienestar', '宠物用品': 'Productos para mascotas' },
     copyProductIds: 'Copiar todos los ID de producto', copied: 'Copiados', copyFailed: 'Error al copiar'
   },
   en: {
@@ -30,7 +31,8 @@ const translations = {
     tryAgain: 'Try another search or filter', loadMore: 'Show more', commission: 'Commission',
     commissionRate: 'Creator commission rate', seller: 'Store',
     pool: 'Selection pool', addToPool: 'Add to pool', removeFromPool: 'Remove from pool', row: 'Product ID',
-    poolEmpty: 'Your selection pool is empty', poolEmptyDesc: 'Add products from the product details.',
+    poolEmpty: 'Your selection pool is empty', poolEmptyDesc: 'Add products from the product details.', allCategories: 'All categories',
+    categoryNames: { '美妆个护': 'Beauty & Personal Care', '服饰内睡': 'Clothing, Lingerie & Sleepwear', '数码家电': 'Electronics & Appliances', '居家日用': 'Home & Daily Essentials', '运动健身': 'Sports & Fitness', '保健': 'Health & Wellness', '宠物用品': 'Pet Supplies' },
     copyProductIds: 'Copy all Product IDs', copied: 'Copied', copyFailed: 'Copy failed'
   },
   zh: {
@@ -46,7 +48,8 @@ const translations = {
     tryAgain: '试试其他关键词或筛选条件', loadMore: '加载更多', commission: '佣金',
     commissionRate: '创作者佣金率', seller: '所属商家',
     pool: '选品池', addToPool: '加入选品池', removeFromPool: '移出选品池', row: '商品 ID',
-    poolEmpty: '选品池还是空的', poolEmptyDesc: '可在商品详情中加入商品。',
+    poolEmpty: '选品池还是空的', poolEmptyDesc: '可在商品详情中加入商品。', allCategories: '全部类目',
+    categoryNames: { '美妆个护': '美妆个护', '服饰内睡': '服饰内睡', '数码家电': '数码家电', '居家日用': '居家日用', '运动健身': '运动健身', '保健': '保健', '宠物用品': '宠物用品' },
     copyProductIds: '复制全部商品 ID', copied: '已复制', copyFailed: '复制失败'
   }
 };
@@ -66,8 +69,7 @@ function parseCommission(commStr) {
 
 function localizedCategory(value, t) {
   if (!value) return '';
-  const lines = value.split('\n');
-  return lines[t.categoryLine] || lines[0];
+  return t.categoryNames?.[value] || value;
 }
 
 function useProductImage(product) {
@@ -429,6 +431,7 @@ function App() {
   const [commissionFilter, setCommissionFilter] = useState('all'); // 'all' | 'high' | 'medium' | 'low'
   const [visibleProducts, setVisibleProducts] = useState(48);
   const [visibleMerchants, setVisibleMerchants] = useState(24);
+  const [selectedCategory, setSelectedCategory] = useState('');
   const [copyStatus, setCopyStatus] = useState('idle');
   const [poolRows, setPoolRows] = useState(() => {
     try {
@@ -446,7 +449,7 @@ function App() {
     localStorage.setItem('sea-ideal-mx-language', locale);
   }, [locale]);
 
-  useEffect(() => { setVisibleProducts(48); }, [viewMode, selectedMerchant, searchQuery, sortBy, commissionFilter]);
+  useEffect(() => { setVisibleProducts(48); }, [viewMode, selectedMerchant, searchQuery, sortBy, commissionFilter, selectedCategory]);
 
   useEffect(() => {
     localStorage.setItem('sea-ideal-mx-selection-pool', JSON.stringify(poolRows));
@@ -477,6 +480,10 @@ function App() {
   useEffect(() => { loadProducts(); }, [loadProducts]);
 
   const hasCommission = products.some(product => product.commission?.trim());
+  const categoryOptions = useMemo(() => (
+    [...new Set(products.map(product => product.category_level_1).filter(Boolean))]
+      .sort((a, b) => localizedCategory(a, t).localeCompare(localizedCategory(b, t), locale))
+  ), [products, locale]);
 
   // Get unique merchants
   const merchants = useMemo(() => {
@@ -501,13 +508,19 @@ function App() {
       result = result.filter(p =>
         p.product_name.toLowerCase().includes(q) ||
         p.shop.toLowerCase().includes(q) ||
-        p.sheet_name.toLowerCase().includes(q)
+        p.sheet_name.toLowerCase().includes(q) ||
+        p.category_level_1?.toLowerCase().includes(q) ||
+        localizedCategory(p.category_level_1, t).toLowerCase().includes(q)
       );
     }
 
     // Merchant filter
     if (selectedMerchant) {
       result = result.filter(p => p.sheet_name === selectedMerchant);
+    }
+
+    if (selectedCategory) {
+      result = result.filter(p => p.category_level_1 === selectedCategory);
     }
 
     // Commission filter
@@ -532,7 +545,7 @@ function App() {
     }
 
     return result;
-  }, [products, searchQuery, selectedMerchant, sortBy, commissionFilter]);
+  }, [products, searchQuery, selectedMerchant, sortBy, commissionFilter, selectedCategory, locale]);
 
   const allPoolProducts = useMemo(() => {
     const productByRow = new Map(products.map(product => [product.row, product]));
@@ -593,6 +606,7 @@ function App() {
   const handleBackToExplore = useCallback(() => {
     setSelectedMerchant(null);
     setSearchQuery('');
+    setSelectedCategory('');
     setCommissionFilter('all');
     setSortBy('default');
     setViewMode('explore');
@@ -631,6 +645,12 @@ function App() {
   const handlePriceSort = useCallback(() => {
     setSortBy(current => current === 'price-asc' ? 'price-desc' : 'price-asc');
     if (viewMode === 'explore') setViewMode('allProducts');
+    window.scrollTo(0, 0);
+  }, [viewMode]);
+
+  const handleCategoryChange = useCallback((value) => {
+    setSelectedCategory(value);
+    if (value && viewMode === 'explore') setViewMode('allProducts');
     window.scrollTo(0, 0);
   }, [viewMode]);
 
@@ -731,6 +751,16 @@ function App() {
           )}
         </div>
       </div>
+
+      {categoryOptions.length > 0 && (
+        <div className="category-filter">
+          <label htmlFor="category-select">{t.category}</label>
+          <select id="category-select" value={selectedCategory} onChange={event => handleCategoryChange(event.target.value)}>
+            <option value="">{t.allCategories}</option>
+            {categoryOptions.map(value => <option key={value} value={value}>{localizedCategory(value, t)}</option>)}
+          </select>
+        </div>
+      )}
 
       {/* Commission Filter Chips */}
       {hasCommission && viewMode !== 'merchantDetail' && (
